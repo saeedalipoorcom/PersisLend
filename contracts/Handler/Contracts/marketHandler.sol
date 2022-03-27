@@ -67,17 +67,54 @@ contract marketHandler {
     function deposit(uint256 _amountToDeposit) external payable returns (bool) {
         require(msg.value == 0);
         address payable _userAddress = payable(msg.sender);
+
+        _checkIfUserIsNew(_userAddress);
+
         DataStorageForHandler.addDepositAmount(_userAddress, _amountToDeposit);
-        _transferFrom(_userAddress, _amountToDeposit);
+        DAIErc20.transferFrom(_userAddress, address(this), _amountToDeposit);
+
         return true;
     }
 
-    function _transferFrom(address payable userAddr, uint256 _amountToDeposit)
+    function withdraw(uint256 _amountToWithdraw)
+        external
+        payable
+        returns (bool)
+    {
+        require(msg.value == 0);
+        address payable _userAddress = payable(msg.sender);
+        DataStorageForHandler.subDepositAmount(_userAddress, _amountToWithdraw);
+        DAIErc20.transfer(_userAddress, _amountToWithdraw);
+        return true;
+    }
+
+    function _checkIfUserIsNew(address payable _userAddress)
         internal
         returns (bool)
     {
-        DAIErc20.transferFrom(userAddr, address(this), _amountToDeposit);
+        bool isUserNew = DataStorageForHandler.getUserAccessed(_userAddress);
 
-        return true;
+        if (isUserNew) {
+            return false;
+        }
+
+        DataStorageForHandler.setuserAccesse(_userAddress, true);
+        (uint256 globaBEXR, uint256 globalDEXR) = DataStorageForHandler
+            .getGlobalEXR();
+        DataStorageForHandler.setUserEXR(_userAddress, globalDEXR, globaBEXR);
+    }
+
+    function syncAndUpdateBlocks() internal returns (bool) {
+        uint256 lastUpdateBlock = DataStorageForHandler.getLastUpdateBlock();
+        uint256 currentBlockNumber = block.number;
+        uint256 deltaBlock = currentBlockNumber - lastUpdateBlock;
+
+        if (deltaBlock > 0) {
+            DataStorageForHandler.setBlocks(currentBlockNumber, deltaBlock);
+            DataStorageForHandler.syncEXR();
+            return true;
+        }
+
+        return false;
     }
 }

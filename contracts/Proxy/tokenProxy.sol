@@ -47,4 +47,23 @@ contract tokenProxy {
         require(_result, string(_returnData));
         return _result;
     }
+
+    function withdraw(uint256 _amountToWithdraw)
+        external
+        payable
+        returns (bool)
+    {
+        bool _result;
+
+        bytes memory _returnData;
+        bytes memory _data = abi.encodeWithSignature(
+            "withdraw(uint256)",
+            _amountToWithdraw
+        );
+
+        (_result, _returnData) = marketHandler.delegatecall(_data);
+
+        require(_result, string(_returnData));
+        return _result;
+    }
 }

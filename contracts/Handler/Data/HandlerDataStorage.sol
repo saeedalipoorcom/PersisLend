@@ -420,16 +420,17 @@ contract HandlerDataStorage {
         return globalDepositEXR;
     }
 
+    function getActionDepositEXR() external view returns (uint256) {
+        return actionDepositEXR;
+    }
+
+    function getActionBorrowEXR() external view returns (uint256) {
+        return actionBorrowEXR;
+    }
+
     function getMarketHandlerAddress() external view returns (address) {
         return marketHandlerAddress;
     }
-
-    //     struct MarketInterestModelParameters {
-    //     uint256 borrowLimit;
-    //     uint256 marginCallLimit;
-    //     uint256 minimumInterestRate;
-    //     uint256 liquiditySensitivity;
-    // }
 
     function getMarketInterestLimits()
         external
