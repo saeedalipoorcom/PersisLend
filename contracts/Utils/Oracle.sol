@@ -16,8 +16,8 @@ contract Oracle {
         price = _price;
     }
 
-    function latestAnswer() external view returns (int256) {
-        return price;
+    function latestAnswer() external view returns (uint256) {
+        return uint256(price);
     }
 
     function setPrice(int256 _price) public onlyOwner {

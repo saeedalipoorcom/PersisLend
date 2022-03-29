@@ -1,7 +1,8 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "../../Utils/SafeMath.sol";
+import "../../Utils/Oracle.sol";
 
 // functions for reservedAmount, reservedAddr, interestModelAddress is not set !
 // we need to set markethandler address for data storage !
@@ -12,6 +13,8 @@ contract HandlerDataStorage {
     address payable Owner;
 
     address marketHandlerAddress;
+
+    Oracle OracleContract;
 
     uint256 constant unifiedPoint = 10**18;
     // uint256 public liquidityLimit = unifiedPoint;
@@ -61,14 +64,18 @@ contract HandlerDataStorage {
         uint256 _borrowLimit,
         uint256 _marginCallLimit,
         uint256 _minimumInterestRate,
-        uint256 _liquiditySensitivity
+        uint256 _liquiditySensitivity,
+        address _OracleContract
     ) {
         Owner = payable(msg.sender);
         initialEXR();
+
         interestParams.borrowLimit = _borrowLimit;
         interestParams.liquiditySensitivity = _liquiditySensitivity;
         interestParams.marginCallLimit = _marginCallLimit;
         interestParams.minimumInterestRate = _minimumInterestRate;
+
+        OracleContract = Oracle(_OracleContract);
     }
 
     function initialEXR() internal {
@@ -242,8 +249,8 @@ contract HandlerDataStorage {
         returns (uint256, uint256)
     {
         return (
-            IntraUserMapping[_userAddress].userBorrow,
-            IntraUserMapping[_userAddress].userDeposit
+            IntraUserMapping[_userAddress].userDeposit,
+            IntraUserMapping[_userAddress].userBorrow
         );
     }
 
@@ -278,8 +285,8 @@ contract HandlerDataStorage {
         return (
             depositTotalAmount,
             borrowTotalAmount,
-            IntraUserMapping[_userAddress].userBorrow,
-            IntraUserMapping[_userAddress].userDeposit
+            IntraUserMapping[_userAddress].userDeposit,
+            IntraUserMapping[_userAddress].userBorrow
         );
     }
 
@@ -487,5 +494,20 @@ contract HandlerDataStorage {
     {
         interestParams.liquiditySensitivity = _liquiditySensitivity;
         return true;
+    }
+
+    function getUserDepositValue(address _userAddress)
+        external
+        view
+        returns (uint256)
+    {
+        uint256 _userDepositAmount = IntraUserMapping[_userAddress].userDeposit;
+        uint256 _updateOraclePrice = getLastMarketPrice();
+
+        return _userDepositAmount * _updateOraclePrice;
+    }
+
+    function getLastMarketPrice() internal view returns (uint256) {
+        return OracleContract.latestAnswer();
     }
 }
