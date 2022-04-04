@@ -19,9 +19,10 @@ contract oracleProxy {
         _;
     }
 
-    constructor(address daiOracle) {
+    constructor(address daiOracle, address ethOracle) {
         owner = payable(msg.sender);
         _setOracleFeed(1, daiOracle);
+        _setOracleFeed(2, ethOracle);
     }
 
     /**

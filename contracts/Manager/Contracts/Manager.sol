@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "../Data/ManagerDataStorage.sol";
 import "../../Utils/oracleProxy.sol";
-import "../../Proxy/tokenProxy.sol";
+import "../../Proxy/tokenProxyInterface.sol";
 
 import "../../Utils/SafeMath.sol";
 
@@ -109,7 +109,10 @@ contract Manager {
                 .getTokenHandlerInfo(ID);
             if (_Support) {
                 address _ProxyAddress = handlerToProxyMapping[_Address];
-                tokenProxy _TokenProxyContract = tokenProxy(_ProxyAddress);
+
+                tokenProxyInterface _TokenProxyContract = tokenProxyInterface(
+                    _ProxyAddress
+                );
 
                 (
                     ,
