@@ -18,13 +18,13 @@ contract HandlerDataStorage {
 
     uint256 constant unifiedPoint = 10**18;
     // uint256 public liquidityLimit = unifiedPoint;
-    // uint256 public limitOfAction = 100000 * unifiedPoint;
+    uint256 public limitOfAction = 100000 * unifiedPoint;
 
     bool emergency = false;
 
-    // int256 reservedAmount;
+    int256 reservedAmount;
     // address payable reservedAddr;
-    // address interestModelAddress;
+    address interestModelAddress;
 
     uint256 lastUpdateBlock;
     uint256 inactiveActionDelta;
@@ -64,8 +64,7 @@ contract HandlerDataStorage {
         uint256 _borrowLimit,
         uint256 _marginCallLimit,
         uint256 _minimumInterestRate,
-        uint256 _liquiditySensitivity,
-        address _OracleContract
+        uint256 _liquiditySensitivity
     ) {
         Owner = payable(msg.sender);
         initialEXR();
@@ -74,8 +73,14 @@ contract HandlerDataStorage {
         interestParams.liquiditySensitivity = _liquiditySensitivity;
         interestParams.marginCallLimit = _marginCallLimit;
         interestParams.minimumInterestRate = _minimumInterestRate;
+    }
 
+    function setOracleContract(address _OracleContract)
+        external
+        returns (bool)
+    {
         OracleContract = Oracle(_OracleContract);
+        return true;
     }
 
     function initialEXR() internal {

@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import "../Data/HandlerDataStorage.sol";
 import "../../Model/InterestModel.sol";
+import "../../Manager/Contracts/Manager.sol";
+
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract marketHandler {
@@ -15,29 +17,50 @@ contract marketHandler {
 
     address payable Owner;
 
-    uint256 handlerID = 0;
-    string tokenName = "DAI";
+    uint256 handlerID;
+    string tokenName;
 
     uint256 constant unifiedPoint = 10**18;
 
     InterestModel InterestModelContract;
-    HandlerDataStorage DataStorageForHandler;
+    HandlerDataStorage DataStorageForHandlerContract;
     IERC20 DAIErc20;
+
+    Manager ManagerContract;
 
     modifier OnlyOwner() {
         require(msg.sender == Owner, "OnlyOwner");
         _;
     }
 
-    constructor(
-        address _DataStorageForHandler,
-        address _DAIErc20,
-        address _InterestModel
-    ) {
+    constructor(address _DAIErc20) {
         Owner = payable(msg.sender);
-        DataStorageForHandler = HandlerDataStorage(_DataStorageForHandler);
         DAIErc20 = IERC20(_DAIErc20);
-        InterestModelContract = InterestModel(_InterestModel);
+    }
+
+    function setManagerContract(address _ManagerContract)
+        external
+        returns (bool)
+    {
+        ManagerContract = Manager(_ManagerContract);
+        return true;
+    }
+
+    function setInterestModelContract(address _InterestModelContract)
+        external
+        returns (bool)
+    {
+        InterestModelContract = InterestModel(_InterestModelContract);
+        return true;
+    }
+
+    function setDataStorageForHandlerContract(
+        address _DataStorageForHandlerContract
+    ) external returns (bool) {
+        DataStorageForHandlerContract = HandlerDataStorage(
+            _DataStorageForHandlerContract
+        );
+        return true;
     }
 
     function setCircuitBreaker(bool _emergency)
@@ -45,7 +68,7 @@ contract marketHandler {
         OnlyOwner
         returns (bool)
     {
-        DataStorageForHandler.setCircuitBreaker(_emergency);
+        DataStorageForHandlerContract.setCircuitBreaker(_emergency);
         return true;
     }
 
@@ -74,11 +97,15 @@ contract marketHandler {
     function deposit(uint256 _amountToDeposit) external payable returns (bool) {
         require(msg.value == 0);
         address payable _userAddress = payable(msg.sender);
+        uint256 _handlerID = handlerID;
 
-        DataStorageForHandler.addDepositAmount(_userAddress, _amountToDeposit);
+        DataStorageForHandlerContract.addDepositAmount(
+            _userAddress,
+            _amountToDeposit
+        );
         DAIErc20.transferFrom(_userAddress, address(this), _amountToDeposit);
 
-        _applyInterest(_userAddress);
+        ManagerContract.applyInterestHandlers(_userAddress, _handlerID);
 
         return true;
     }
@@ -90,7 +117,15 @@ contract marketHandler {
     {
         require(msg.value == 0);
         address payable _userAddress = payable(msg.sender);
-        DataStorageForHandler.subDepositAmount(_userAddress, _amountToWithdraw);
+        uint256 _handlerID = handlerID;
+
+        DataStorageForHandlerContract.subDepositAmount(
+            _userAddress,
+            _amountToWithdraw
+        );
+
+        ManagerContract.applyInterestHandlers(_userAddress, _handlerID);
+
         DAIErc20.transfer(_userAddress, _amountToWithdraw);
         return true;
     }
@@ -132,10 +167,10 @@ contract marketHandler {
             globalBorrowEXR
         ) = InterestModelContract._getInterestAmountsForUser(
             _userAddress,
-            address(DataStorageForHandler)
+            address(DataStorageForHandlerContract)
         );
 
-        DataStorageForHandler.setEXR(
+        DataStorageForHandlerContract.setEXR(
             _userAddress,
             globalDepositEXR,
             globalBorrowEXR
@@ -159,27 +194,37 @@ contract marketHandler {
         internal
         returns (bool)
     {
-        bool isUserNew = DataStorageForHandler.getUserAccessed(_userAddress);
+        bool isUserNew = DataStorageForHandlerContract.getUserAccessed(
+            _userAddress
+        );
 
         if (isUserNew) {
             return false;
         }
 
-        DataStorageForHandler.setuserAccesse(_userAddress, true);
-        (uint256 globaBEXR, uint256 globalDEXR) = DataStorageForHandler
+        DataStorageForHandlerContract.setuserAccesse(_userAddress, true);
+        (uint256 globaBEXR, uint256 globalDEXR) = DataStorageForHandlerContract
             .getGlobalEXR();
-        DataStorageForHandler.setUserEXR(_userAddress, globalDEXR, globaBEXR);
+        DataStorageForHandlerContract.setUserEXR(
+            _userAddress,
+            globalDEXR,
+            globaBEXR
+        );
         return true;
     }
 
     function syncAndUpdateBlocks() internal returns (bool) {
-        uint256 lastUpdateBlock = DataStorageForHandler.getLastUpdateBlock();
+        uint256 lastUpdateBlock = DataStorageForHandlerContract
+            .getLastUpdateBlock();
         uint256 currentBlockNumber = block.number;
         uint256 deltaBlock = currentBlockNumber - lastUpdateBlock;
 
         if (deltaBlock > 0) {
-            DataStorageForHandler.setBlocks(currentBlockNumber, deltaBlock);
-            DataStorageForHandler.syncEXR();
+            DataStorageForHandlerContract.setBlocks(
+                currentBlockNumber,
+                deltaBlock
+            );
+            DataStorageForHandlerContract.syncEXR();
             return true;
         }
 
@@ -211,7 +256,7 @@ contract marketHandler {
             _deltaBorrowAmount
         );
 
-        DataStorageForHandler.updateAmounts(
+        DataStorageForHandlerContract.updateAmounts(
             _userAddress,
             depositTotalAmount,
             borrowTotalAmount,
@@ -247,7 +292,7 @@ contract marketHandler {
             borrowTotalAmount,
             userDepositAmount,
             userBorrowAmount
-        ) = DataStorageForHandler.getAmounts(userAddr);
+        ) = DataStorageForHandlerContract.getAmounts(userAddr);
 
         if (depositNegativeFlag) {
             depositTotalAmount = sub(depositTotalAmount, deltaDepositAmount);
@@ -272,6 +317,29 @@ contract marketHandler {
             userBorrowAmount
         );
     }
+
+    // function getIntraUserDepositAmount(address payable _userAddress)
+    //     external
+    //     view
+    //     returns (uint256)
+    // {
+    //     return
+    //         DataStorageForHandlerContract.getIntraUserDepositAmount(
+    //             _userAddress
+    //         );
+    // }
+
+    // function MakeChange(address payable _userAddress, uint256 _amountToDeposit)
+    //     external
+    //     returns (bool)
+    // {
+    //     DataStorageForHandlerContract.addDepositAmount(
+    //         _userAddress,
+    //         _amountToDeposit
+    //     );
+
+    //     return true;
+    // }
 
     /* ******************* Safe Math ******************* */
 

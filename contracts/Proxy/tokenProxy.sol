@@ -5,17 +5,21 @@ import "../Handler/Data/HandlerDataStorage.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../Model/InterestModel.sol";
 
+import "../Manager/Contracts/Manager.sol";
+
 contract tokenProxy {
     address payable Owner;
 
-    uint256 handlerID = 0;
-    string tokenName = "DAI";
+    uint256 handlerID;
+    string tokenName;
 
     uint256 constant unifiedPoint = 10**18;
 
     InterestModel InterestModelContract;
-    HandlerDataStorage DataStorageForHandler;
+    HandlerDataStorage DataStorageForHandlerContract;
     IERC20 DAIErc20;
+
+    Manager ManagerContract;
 
     modifier OnlyOwner() {
         require(msg.sender == Owner, "OnlyOwner");
@@ -24,17 +28,53 @@ contract tokenProxy {
 
     address marketHandler;
 
-    constructor(
-        address _marketHandler,
-        address _DataStorageForHandler,
-        address _DAIErc20,
-        address _InterestModel
-    ) {
+    constructor(address _DAIErc20) {
         Owner = payable(msg.sender);
-        marketHandler = _marketHandler;
-        DataStorageForHandler = HandlerDataStorage(_DataStorageForHandler);
         DAIErc20 = IERC20(_DAIErc20);
-        InterestModelContract = InterestModel(_InterestModel);
+    }
+
+    function setManagerContract(address _ManagerContract)
+        external
+        returns (bool)
+    {
+        ManagerContract = Manager(_ManagerContract);
+        return true;
+    }
+
+    function setMarketHandler(address _marketHandler) external returns (bool) {
+        marketHandler = _marketHandler;
+        return true;
+    }
+
+    function setInterestModelContract(address _InterestModelContract)
+        external
+        returns (bool)
+    {
+        InterestModelContract = InterestModel(_InterestModelContract);
+        return true;
+    }
+
+    function setDataStorageForHandlerContract(
+        address _DataStorageForHandlerContract
+    ) external returns (bool) {
+        DataStorageForHandlerContract = HandlerDataStorage(
+            _DataStorageForHandlerContract
+        );
+        return true;
+    }
+
+    function settokenName(string memory _tokenName) external returns (bool) {
+        tokenName = _tokenName;
+        return true;
+    }
+
+    function getHandlerID() external view returns (uint256) {
+        return handlerID;
+    }
+
+    function sethandlerID(uint256 _handlerID) external returns (bool) {
+        handlerID = _handlerID;
+        return true;
     }
 
     function deposit(uint256 _amountToDeposit) external payable returns (bool) {
@@ -69,5 +109,37 @@ contract tokenProxy {
 
         require(_result, string(_returnData));
         return _result;
+    }
+
+    function handlerProxy(bytes memory data)
+        external
+        returns (bool, bytes memory)
+    {
+        bool result;
+        bytes memory returnData;
+        (result, returnData) = marketHandler.delegatecall(data);
+        require(result, string(returnData));
+        return (result, returnData);
+    }
+
+    function getAmounts(address payable _userAddress)
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
+        return DataStorageForHandlerContract.getAmounts(_userAddress);
+    }
+
+    function getMarketInterestLimits()
+        external
+        view
+        returns (uint256, uint256)
+    {
+        return DataStorageForHandlerContract.getMarketInterestLimits();
     }
 }
