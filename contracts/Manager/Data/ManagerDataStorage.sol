@@ -19,12 +19,27 @@ contract ManagerDataStorage {
         _;
     }
 
+    modifier OnlyManager() {
+        require(msg.sender == ManagerContract, "OnlyManager");
+        _;
+    }
+
     constructor() {
         Owner = msg.sender;
     }
 
+    function setManagerContract(address _ManagerContract)
+        external
+        OnlyOwner
+        returns (bool)
+    {
+        ManagerContract = _ManagerContract;
+        return true;
+    }
+
     function setTokenHandler(uint256 handlerID, address handlerAddr)
         external
+        OnlyManager
         returns (bool)
     {
         TokenHandler memory handler;

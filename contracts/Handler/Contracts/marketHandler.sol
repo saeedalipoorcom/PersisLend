@@ -33,6 +33,11 @@ contract marketHandler {
         _;
     }
 
+    modifier OnlyManager() {
+        require(msg.sender == address(ManagerContract), "OnlyManager");
+        _;
+    }
+
     constructor(address _DAIErc20) {
         Owner = payable(msg.sender);
         DAIErc20 = IERC20(_DAIErc20);
@@ -40,6 +45,7 @@ contract marketHandler {
 
     function setManagerContract(address _ManagerContract)
         external
+        OnlyOwner
         returns (bool)
     {
         ManagerContract = Manager(_ManagerContract);
@@ -48,6 +54,7 @@ contract marketHandler {
 
     function setInterestModelContract(address _InterestModelContract)
         external
+        OnlyOwner
         returns (bool)
     {
         InterestModelContract = InterestModel(_InterestModelContract);
@@ -56,7 +63,7 @@ contract marketHandler {
 
     function setDataStorageForHandlerContract(
         address _DataStorageForHandlerContract
-    ) external returns (bool) {
+    ) external OnlyOwner returns (bool) {
         DataStorageForHandlerContract = HandlerDataStorage(
             _DataStorageForHandlerContract
         );
@@ -132,6 +139,7 @@ contract marketHandler {
 
     function applyInterest(address payable _userAddress)
         external
+        OnlyManager
         returns (uint256, uint256)
     {
         return _applyInterest(_userAddress);
@@ -317,29 +325,6 @@ contract marketHandler {
             userBorrowAmount
         );
     }
-
-    // function getIntraUserDepositAmount(address payable _userAddress)
-    //     external
-    //     view
-    //     returns (uint256)
-    // {
-    //     return
-    //         DataStorageForHandlerContract.getIntraUserDepositAmount(
-    //             _userAddress
-    //         );
-    // }
-
-    // function MakeChange(address payable _userAddress, uint256 _amountToDeposit)
-    //     external
-    //     returns (bool)
-    // {
-    //     DataStorageForHandlerContract.addDepositAmount(
-    //         _userAddress,
-    //         _amountToDeposit
-    //     );
-
-    //     return true;
-    // }
 
     /* ******************* Safe Math ******************* */
 

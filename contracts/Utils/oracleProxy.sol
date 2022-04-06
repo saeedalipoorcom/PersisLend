@@ -10,9 +10,13 @@ contract oracleProxy {
 
     struct Oracle {
         OracleInterface feed;
+        uint256 feedUnderlyingPoint;
+        bool needPriceConvert;
+        uint256 priceConvertID;
     }
 
     uint256 constant unifiedPoint = 10**18;
+    uint256 constant defaultUnderlyingPoint = 8;
 
     modifier onlyOwner() {
         require(msg.sender == owner);
@@ -21,70 +25,60 @@ contract oracleProxy {
 
     constructor(address daiOracle, address ethOracle) {
         owner = payable(msg.sender);
-        _setOracleFeed(1, daiOracle);
-        _setOracleFeed(2, ethOracle);
+        _setOracleFeed(1, daiOracle, 8, false, 0);
+        _setOracleFeed(2, ethOracle, 8, false, 0);
     }
 
-    /**
-     * @dev Replace the owner of the handler
-     * @param _owner the address of the owner to be replaced
-     * @return true (TODO: validate results)
-     */
-    function ownershipTransfer(address payable _owner)
-        public
-        onlyOwner
-        returns (bool)
-    {
-        owner = _owner;
-        return true;
-    }
-
-    function setOracleFeed(uint256 tokenID, address feedAddr)
-        external
-        onlyOwner
-        returns (bool)
-    {
-        return _setOracleFeed(tokenID, feedAddr);
-    }
-
-    function _setOracleFeed(uint256 tokenID, address feedAddr)
-        internal
-        returns (bool)
-    {
+    function _setOracleFeed(
+        uint256 tokenID,
+        address feedAddr,
+        uint256 decimals,
+        bool needPriceConvert,
+        uint256 priceConvertID
+    ) internal returns (bool) {
         Oracle memory _oracle;
         _oracle.feed = OracleInterface(feedAddr);
+
+        _oracle.feedUnderlyingPoint = (10**decimals);
+
+        _oracle.needPriceConvert = needPriceConvert;
+
+        _oracle.priceConvertID = priceConvertID;
 
         oracle[tokenID] = _oracle;
         return true;
     }
 
-    /**
-     * @dev The price of the token is obtained through the price feed contract.
-     * @param tokenID The ID of the token that will take the price.
-     * @return The token price of a uniform unit.
-     */
     function getTokenPrice(uint256 tokenID) external view returns (uint256) {
         Oracle memory _oracle = oracle[tokenID];
-        uint256 underlyingPrice = _oracle.feed.latestAnswer();
+        // _oracle.feed.latestAnswer();
+        uint256 underlyingPrice = uint256(_oracle.feed.getLatestPrice());
 
-        require(underlyingPrice != 0);
-        return underlyingPrice;
+        uint256 unifiedPrice = _convertPriceToUnified(
+            underlyingPrice,
+            _oracle.feedUnderlyingPoint
+        );
+
+        if (_oracle.needPriceConvert) {
+            _oracle = oracle[_oracle.priceConvertID];
+            uint256 convertFeedUnderlyingPrice = uint256(
+                _oracle.feed.getLatestPrice()
+            );
+            uint256 convertPrice = _convertPriceToUnified(
+                convertFeedUnderlyingPrice,
+                oracle[2].feedUnderlyingPoint
+            );
+            unifiedPrice = unifiedMul(unifiedPrice, convertPrice);
+        }
+
+        require(unifiedPrice != 0);
+        return unifiedPrice;
     }
 
-    /**
-     * @dev Get owner's address in manager contract
-     * @return The address of owner
-     */
     function getOwner() public view returns (address) {
         return owner;
     }
 
-    /**
-     * @dev Unify the decimal value of the token price returned by price feed oracle.
-     * @param price token price without unified of decimal
-     * @param feedUnderlyingPoint Decimal of the token
-     * @return The price of tokens with unified decimal
-     */
     function _convertPriceToUnified(uint256 price, uint256 feedUnderlyingPoint)
         internal
         pure

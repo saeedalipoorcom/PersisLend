@@ -2,7 +2,6 @@
 pragma solidity ^0.8.0;
 
 import "../../Utils/SafeMath.sol";
-import "../../Utils/Oracle.sol";
 
 // functions for reservedAmount, reservedAddr, interestModelAddress is not set !
 // we need to set markethandler address for data storage !
@@ -13,18 +12,17 @@ contract HandlerDataStorage {
     address payable Owner;
 
     address marketHandlerAddress;
-
-    Oracle OracleContract;
+    address handlerProxyAddress;
+    address interestModelAddress;
 
     uint256 constant unifiedPoint = 10**18;
-    // uint256 public liquidityLimit = unifiedPoint;
+    uint256 public liquidityLimit = unifiedPoint;
     uint256 public limitOfAction = 100000 * unifiedPoint;
 
     bool emergency = false;
 
     int256 reservedAmount;
     // address payable reservedAddr;
-    address interestModelAddress;
 
     uint256 lastUpdateBlock;
     uint256 inactiveActionDelta;
@@ -60,6 +58,17 @@ contract HandlerDataStorage {
         _;
     }
 
+    modifier OnlyMyContracts() {
+        address msgSender = msg.sender;
+        require(
+            (msgSender == handlerProxyAddress) ||
+                (msgSender == marketHandlerAddress) ||
+                (msgSender == interestModelAddress) ||
+                (msgSender == Owner)
+        );
+        _;
+    }
+
     constructor(
         uint256 _borrowLimit,
         uint256 _marginCallLimit,
@@ -75,11 +84,30 @@ contract HandlerDataStorage {
         interestParams.minimumInterestRate = _minimumInterestRate;
     }
 
-    function setOracleContract(address _OracleContract)
+    function setMarketHandlerAddress(address _marketHandlerAddress)
         external
+        OnlyOwner
         returns (bool)
     {
-        OracleContract = Oracle(_OracleContract);
+        marketHandlerAddress = _marketHandlerAddress;
+        return true;
+    }
+
+    function setinterestModelAddress(address _interestModelAddress)
+        external
+        OnlyOwner
+        returns (bool)
+    {
+        interestModelAddress = _interestModelAddress;
+        return true;
+    }
+
+    function sethandlerProxy(address _handlerProxyAddress)
+        external
+        OnlyOwner
+        returns (bool)
+    {
+        handlerProxyAddress = _handlerProxyAddress;
         return true;
     }
 
@@ -117,7 +145,11 @@ contract HandlerDataStorage {
         return true;
     }
 
-    function setNewUser(address payable _userAddress) external returns (bool) {
+    function setNewUser(address payable _userAddress)
+        external
+        OnlyMyContracts
+        returns (bool)
+    {
         IntraUserMapping[_userAddress].userAccessed = true;
         IntraUserMapping[_userAddress].userDepositEXR = unifiedPoint;
         IntraUserMapping[_userAddress].userBorrowEXR = unifiedPoint;
@@ -126,6 +158,7 @@ contract HandlerDataStorage {
 
     function setuserAccesse(address payable _userAddress, bool _newStatus)
         external
+        OnlyMyContracts
         returns (bool)
     {
         IntraUserMapping[_userAddress].userAccessed = _newStatus;
@@ -134,6 +167,7 @@ contract HandlerDataStorage {
 
     function addDepositTotalAmount(uint256 _amountToAdd)
         external
+        OnlyMyContracts
         returns (bool)
     {
         depositTotalAmount = depositTotalAmount.add(_amountToAdd);
@@ -142,6 +176,7 @@ contract HandlerDataStorage {
 
     function subDepositTotalAmount(uint256 _amountToSub)
         external
+        OnlyMyContracts
         returns (bool)
     {
         depositTotalAmount = depositTotalAmount.sub(_amountToSub);
@@ -150,6 +185,7 @@ contract HandlerDataStorage {
 
     function addborrowTotalAmount(uint256 _amountToAdd)
         external
+        OnlyMyContracts
         returns (bool)
     {
         borrowTotalAmount = borrowTotalAmount.add(_amountToAdd);
@@ -158,6 +194,7 @@ contract HandlerDataStorage {
 
     function subborrowTotalAmount(uint256 _amountToSub)
         external
+        OnlyMyContracts
         returns (bool)
     {
         borrowTotalAmount = borrowTotalAmount.sub(_amountToSub);
@@ -167,7 +204,7 @@ contract HandlerDataStorage {
     function addIntraUserDepositAmount(
         address payable _userAddress,
         uint256 _amountToAdd
-    ) external returns (bool) {
+    ) external OnlyMyContracts returns (bool) {
         IntraUserMapping[_userAddress].userDeposit = IntraUserMapping[
             _userAddress
         ].userDeposit.add(_amountToAdd);
@@ -177,7 +214,7 @@ contract HandlerDataStorage {
     function subIntraUserDepositAmount(
         address payable _userAddress,
         uint256 _amountToSub
-    ) external returns (bool) {
+    ) external OnlyMyContracts returns (bool) {
         IntraUserMapping[_userAddress].userDeposit = IntraUserMapping[
             _userAddress
         ].userDeposit.sub(_amountToSub);
@@ -187,7 +224,7 @@ contract HandlerDataStorage {
     function addIntraUserBorrowAmount(
         address payable _userAddress,
         uint256 _amountToAdd
-    ) external returns (bool) {
+    ) external OnlyMyContracts returns (bool) {
         IntraUserMapping[_userAddress].userBorrow = IntraUserMapping[
             _userAddress
         ].userBorrow.add(_amountToAdd);
@@ -197,7 +234,7 @@ contract HandlerDataStorage {
     function subIntraUserBorrowAmount(
         address payable _userAddress,
         uint256 _amountToSub
-    ) external returns (bool) {
+    ) external OnlyMyContracts returns (bool) {
         IntraUserMapping[_userAddress].userBorrow = IntraUserMapping[
             _userAddress
         ].userBorrow.sub(_amountToSub);
@@ -207,7 +244,7 @@ contract HandlerDataStorage {
     function addDepositAmount(
         address payable _userAddress,
         uint256 _amountToAdd
-    ) external returns (bool) {
+    ) external OnlyMyContracts returns (bool) {
         IntraUserMapping[_userAddress].userDeposit = IntraUserMapping[
             _userAddress
         ].userDeposit.add(_amountToAdd);
@@ -218,7 +255,7 @@ contract HandlerDataStorage {
     function subDepositAmount(
         address payable _userAddress,
         uint256 _amountToSub
-    ) external returns (bool) {
+    ) external OnlyMyContracts returns (bool) {
         IntraUserMapping[_userAddress].userDeposit = IntraUserMapping[
             _userAddress
         ].userDeposit.sub(_amountToSub);
@@ -228,6 +265,7 @@ contract HandlerDataStorage {
 
     function addBorrowAmount(address payable _userAddress, uint256 _amountToAdd)
         external
+        OnlyMyContracts
         returns (bool)
     {
         IntraUserMapping[_userAddress].userBorrow = IntraUserMapping[
@@ -239,6 +277,7 @@ contract HandlerDataStorage {
 
     function subBorrowAmount(address payable _userAddress, uint256 _amountToSub)
         external
+        OnlyMyContracts
         returns (bool)
     {
         IntraUserMapping[_userAddress].userBorrow = IntraUserMapping[
@@ -269,7 +308,7 @@ contract HandlerDataStorage {
         uint256 _borrowTotalAmount,
         uint256 _depositAmount,
         uint256 _borrowAmount
-    ) external returns (bool) {
+    ) external OnlyMyContracts returns (bool) {
         depositTotalAmount = _depositTotalAmount;
         borrowTotalAmount = _borrowTotalAmount;
         IntraUserMapping[_userAddress].userBorrow = _borrowAmount;
@@ -297,6 +336,7 @@ contract HandlerDataStorage {
 
     function setBlocks(uint256 _lastUpdateBlock, uint256 _inactiveActionDelta)
         external
+        OnlyMyContracts
         returns (bool)
     {
         lastUpdateBlock = _lastUpdateBlock;
@@ -306,6 +346,7 @@ contract HandlerDataStorage {
 
     function setLastUpdateBlock(uint256 _lastUpdateBlock)
         external
+        OnlyMyContracts
         returns (bool)
     {
         lastUpdateBlock = _lastUpdateBlock;
@@ -314,13 +355,14 @@ contract HandlerDataStorage {
 
     function setInactiveActionDelta(uint256 _inactiveActionDelta)
         external
+        OnlyMyContracts
         returns (bool)
     {
         inactiveActionDelta = _inactiveActionDelta;
         return true;
     }
 
-    function syncEXR() external returns (bool) {
+    function syncEXR() external OnlyMyContracts returns (bool) {
         actionDepositEXR = globalDepositEXR;
         actionBorrowEXR = globalBorrowEXR;
         return true;
@@ -332,6 +374,7 @@ contract HandlerDataStorage {
 
     function setActionEXR(uint256 _actionDepositEXR, uint256 _actionBorrowEXR)
         external
+        OnlyMyContracts
         returns (bool)
     {
         actionBorrowEXR = _actionBorrowEXR;
@@ -343,7 +386,7 @@ contract HandlerDataStorage {
         address payable _userAddress,
         uint256 _globalDepositEXR,
         uint256 _globalBorrowEXR
-    ) external returns (bool) {
+    ) external OnlyMyContracts returns (bool) {
         globalDepositEXR = _globalDepositEXR;
         globalBorrowEXR = _globalBorrowEXR;
         IntraUserMapping[_userAddress].userDepositEXR = _globalDepositEXR;
@@ -366,7 +409,7 @@ contract HandlerDataStorage {
         address payable _userAddress,
         uint256 _globalDepositEXR,
         uint256 _globalBorrowEXR
-    ) external returns (bool) {
+    ) external OnlyMyContracts returns (bool) {
         IntraUserMapping[_userAddress].userDepositEXR = _globalDepositEXR;
         IntraUserMapping[_userAddress].userBorrowEXR = _globalBorrowEXR;
         return true;
@@ -374,14 +417,6 @@ contract HandlerDataStorage {
 
     function getGlobalEXR() external view returns (uint256, uint256) {
         return (globalBorrowEXR, globalDepositEXR);
-    }
-
-    function setMarketHandlerAddress(address _marketHandlerAddress)
-        external
-        returns (bool)
-    {
-        marketHandlerAddress = _marketHandlerAddress;
-        return true;
     }
 
     function getTotalBorrowAmount() external view returns (uint256) {
@@ -472,13 +507,18 @@ contract HandlerDataStorage {
         return interestParams.liquiditySensitivity;
     }
 
-    function setBorrowLimit(uint256 _borrowLimit) external returns (bool) {
+    function setBorrowLimit(uint256 _borrowLimit)
+        external
+        OnlyOwner
+        returns (bool)
+    {
         interestParams.borrowLimit = _borrowLimit;
         return true;
     }
 
     function setMarginCallLimit(uint256 _marginCallLimit)
         external
+        OnlyOwner
         returns (bool)
     {
         interestParams.marginCallLimit = _marginCallLimit;
@@ -487,6 +527,7 @@ contract HandlerDataStorage {
 
     function setMinimumInterestRate(uint256 _minimumInterestRate)
         external
+        OnlyOwner
         returns (bool)
     {
         interestParams.minimumInterestRate = _minimumInterestRate;
@@ -495,24 +536,10 @@ contract HandlerDataStorage {
 
     function setLiquiditySensitivity(uint256 _liquiditySensitivity)
         external
+        OnlyOwner
         returns (bool)
     {
         interestParams.liquiditySensitivity = _liquiditySensitivity;
         return true;
-    }
-
-    function getUserDepositValue(address _userAddress)
-        external
-        view
-        returns (uint256)
-    {
-        uint256 _userDepositAmount = IntraUserMapping[_userAddress].userDeposit;
-        uint256 _updateOraclePrice = getLastMarketPrice();
-
-        return _userDepositAmount * _updateOraclePrice;
-    }
-
-    function getLastMarketPrice() internal view returns (uint256) {
-        return OracleContract.latestAnswer();
     }
 }

@@ -29,8 +29,8 @@ module.exports = {
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
-    ropsten: {
-      url: process.env.ROPSTEN_URL || "",
+    rinkeby: {
+      url: "https://eth-rinkeby.alchemyapi.io/v2/8tSN27CoCO4_TO1dWJ-xFVYsjrYblsQc",
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },

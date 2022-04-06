@@ -201,7 +201,6 @@ contract InterestModel {
         uint256 _depositTotalAmount,
         uint256 _borrowTotalAmount
     ) internal view returns (uint256, uint256) {
-        // we get util rate by depositTotalamount / borrowTotalAmount
         uint256 _utilRate = _getUtilizationRate(
             _depositTotalAmount,
             _borrowTotalAmount

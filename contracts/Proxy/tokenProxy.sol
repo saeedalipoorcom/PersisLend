@@ -35,19 +35,25 @@ contract tokenProxy {
 
     function setManagerContract(address _ManagerContract)
         external
+        OnlyOwner
         returns (bool)
     {
         ManagerContract = Manager(_ManagerContract);
         return true;
     }
 
-    function setMarketHandler(address _marketHandler) external returns (bool) {
+    function setMarketHandler(address _marketHandler)
+        external
+        OnlyOwner
+        returns (bool)
+    {
         marketHandler = _marketHandler;
         return true;
     }
 
     function setInterestModelContract(address _InterestModelContract)
         external
+        OnlyOwner
         returns (bool)
     {
         InterestModelContract = InterestModel(_InterestModelContract);
@@ -56,14 +62,18 @@ contract tokenProxy {
 
     function setDataStorageForHandlerContract(
         address _DataStorageForHandlerContract
-    ) external returns (bool) {
+    ) external OnlyOwner returns (bool) {
         DataStorageForHandlerContract = HandlerDataStorage(
             _DataStorageForHandlerContract
         );
         return true;
     }
 
-    function settokenName(string memory _tokenName) external returns (bool) {
+    function settokenName(string memory _tokenName)
+        external
+        OnlyOwner
+        returns (bool)
+    {
         tokenName = _tokenName;
         return true;
     }
@@ -72,7 +82,11 @@ contract tokenProxy {
         return handlerID;
     }
 
-    function sethandlerID(uint256 _handlerID) external returns (bool) {
+    function sethandlerID(uint256 _handlerID)
+        external
+        OnlyOwner
+        returns (bool)
+    {
         handlerID = _handlerID;
         return true;
     }
@@ -109,17 +123,6 @@ contract tokenProxy {
 
         require(_result, string(_returnData));
         return _result;
-    }
-
-    function handlerProxy(bytes memory data)
-        external
-        returns (bool, bytes memory)
-    {
-        bool result;
-        bytes memory returnData;
-        (result, returnData) = marketHandler.delegatecall(data);
-        require(result, string(returnData));
-        return (result, returnData);
     }
 
     function getAmounts(address payable _userAddress)

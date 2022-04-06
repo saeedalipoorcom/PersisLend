@@ -6,13 +6,6 @@ import "../../Model/InterestModel.sol";
 import "../../Manager/Contracts/Manager.sol";
 
 contract ETHmarketHandler {
-    event Deposit(
-        address _depositedFrom,
-        uint256 _amountToDeposit,
-        uint256 _handlerID
-    );
-    event OwnershipTransferred(address owner, address newOwner);
-
     address payable Owner;
 
     uint256 handlerID;
@@ -30,12 +23,18 @@ contract ETHmarketHandler {
         _;
     }
 
+    modifier OnlyManager() {
+        require(msg.sender == address(ManagerContract), "OnlyManager");
+        _;
+    }
+
     constructor() {
         Owner = payable(msg.sender);
     }
 
     function setManagerContract(address _ManagerContract)
         external
+        OnlyOwner
         returns (bool)
     {
         ManagerContract = Manager(_ManagerContract);
@@ -44,6 +43,7 @@ contract ETHmarketHandler {
 
     function setInterestModelContract(address _InterestModelContract)
         external
+        OnlyOwner
         returns (bool)
     {
         InterestModelContract = InterestModel(_InterestModelContract);
@@ -52,7 +52,7 @@ contract ETHmarketHandler {
 
     function setDataStorageForHandlerContract(
         address _ETHHandlerDataStorageContract
-    ) external returns (bool) {
+    ) external OnlyOwner returns (bool) {
         DataStorageForHandlerContract = ETHHandlerDataStorage(
             _ETHHandlerDataStorageContract
         );
@@ -126,6 +126,7 @@ contract ETHmarketHandler {
 
     function applyInterest(address payable _userAddress)
         external
+        OnlyManager
         returns (uint256, uint256)
     {
         return _applyInterest(_userAddress);
@@ -311,29 +312,6 @@ contract ETHmarketHandler {
             userBorrowAmount
         );
     }
-
-    // function getIntraUserDepositAmount(address payable _userAddress)
-    //     external
-    //     view
-    //     returns (uint256)
-    // {
-    //     return
-    //         DataStorageForHandlerContract.getIntraUserDepositAmount(
-    //             _userAddress
-    //         );
-    // }
-
-    // function MakeChange(address payable _userAddress, uint256 _amountToDeposit)
-    //     external
-    //     returns (bool)
-    // {
-    //     DataStorageForHandlerContract.addDepositAmount(
-    //         _userAddress,
-    //         _amountToDeposit
-    //     );
-
-    //     return true;
-    // }
 
     /* ******************* Safe Math ******************* */
 
