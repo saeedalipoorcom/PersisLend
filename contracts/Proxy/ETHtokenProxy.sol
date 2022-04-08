@@ -121,6 +121,31 @@ contract ETHtokenProxy {
         return _result;
     }
 
+    function borrow(uint256 _amountToBorrow) public returns (bool) {
+        bool result;
+
+        bytes memory returnData;
+        bytes memory data = abi.encodeWithSignature(
+            "borrow(uint256)",
+            _amountToBorrow
+        );
+        (result, returnData) = marketHandler.delegatecall(data);
+        require(result, string(returnData));
+        return result;
+    }
+
+    function repay(uint256 _amountToRePay) public payable returns (bool) {
+        bool result;
+        bytes memory returnData;
+        bytes memory data = abi.encodeWithSignature(
+            "repay(uint256)",
+            _amountToRePay
+        );
+        (result, returnData) = marketHandler.delegatecall(data);
+        require(result, string(returnData));
+        return result;
+    }
+
     function getAmounts(address payable _userAddress)
         external
         view

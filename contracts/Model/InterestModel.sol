@@ -182,6 +182,14 @@ contract InterestModel {
         );
     }
 
+    function getSIRBIR(uint256 _depositTotalAmount, uint256 _borrowTotalAmount)
+        external
+        view
+        returns (uint256, uint256)
+    {
+        return _getSIRandBIRonBlock(_depositTotalAmount, _borrowTotalAmount);
+    }
+
     function _getSIRandBIRonBlock(
         uint256 _depositTotalAmount,
         uint256 _borrowTotalAmount

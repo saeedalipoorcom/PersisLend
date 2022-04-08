@@ -98,7 +98,17 @@ contract Manager {
     function applyInterestHandlers(
         address payable _userAddress,
         uint256 _handlerID
-    ) external returns (uint256) {
+    )
+        external
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        )
+    {
         UserAssetsInfo memory userAssetsInfo;
 
         bool _Support;
@@ -197,7 +207,18 @@ contract Manager {
 
         UserAssetsInfoMapping[_userAddress] = userAssetsInfo;
 
-        return userAssetsInfo.userBorrowableAsset;
+        return (
+            userAssetsInfo.userBorrowableAsset.unifiedDiv(
+                userAssetsInfo.callerPrice
+            ),
+            userAssetsInfo.withdrawableAsset.unifiedDiv(
+                userAssetsInfo.callerPrice
+            ),
+            userAssetsInfo.marginCallLimitSum,
+            userAssetsInfo.depositAssetSum,
+            userAssetsInfo.borrowAssetSum,
+            userAssetsInfo.callerPrice
+        );
     }
 
     function getUserDepositAmount(address _userAddress)

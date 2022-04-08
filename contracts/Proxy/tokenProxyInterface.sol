@@ -18,7 +18,7 @@ interface tokenProxyInterface {
 
     function settokenName(string memory _tokenName) external returns (bool);
 
-    function getHandlerID() external virtual returns (uint256);
+    function getHandlerID() external returns (uint256);
 
     function sethandlerID(uint256 _handlerID) external returns (bool);
 
@@ -29,13 +29,12 @@ interface tokenProxyInterface {
         payable
         returns (bool);
 
-    function handlerProxy(bytes memory data)
-        external
-        returns (bool, bytes memory);
+    function borrow(uint256 _amountToBorrow) external returns (bool);
+
+    function repay(uint256 _amountToRePay) external payable returns (bool);
 
     function getAmounts(address payable _userAddress)
         external
-        virtual
         returns (
             uint256,
             uint256,
@@ -43,8 +42,5 @@ interface tokenProxyInterface {
             uint256
         );
 
-    function getMarketInterestLimits()
-        external
-        virtual
-        returns (uint256, uint256);
+    function getMarketInterestLimits() external returns (uint256, uint256);
 }
